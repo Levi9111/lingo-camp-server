@@ -27,9 +27,15 @@ async function run() {
 
     // collections 
     const instructorsCollection = client.db('lingoCamp').collection('instructors');
+    const classesCollection = client.db('lingoCamp').collection('classes');
 
     app.get('/instructors', async(req,res)=>{
         const result = await instructorsCollection.find().toArray();
+        res.send(result);
+    })
+
+    app.get('/classes', async(req,res)=>{
+        const result = await classesCollection.find().toArray();
         res.send(result);
     })
 
