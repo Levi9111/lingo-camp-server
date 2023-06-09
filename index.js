@@ -30,6 +30,7 @@ async function run() {
     // collections 
     const instructorsCollection = client.db('lingoCamp').collection('instructors');
     const classesCollection = client.db('lingoCamp').collection('classes');
+    const usersCollection = client.db('lingoCamp').collection('users');
 
     // json web token
     app.post('/jwt', (req,res)=>{
@@ -49,7 +50,25 @@ async function run() {
         const result = await classesCollection.find().toArray();
         res.send(result);
     })
+    
+    //--------->
 
+    app.get("/users", async (req, res) => {
+        const result = await usersCollection.find().toArray();
+        res.send(result);
+      });
+  
+      app.post("/users", async (req, res) => {
+        const user = req.body;
+        const query = { email: user.email };
+        const existedUser = await usersCollection.findOne(query);
+        // exister user used to identify if the user is already in the database while logging in with google
+        if (existedUser) return res.status(400).send("User already exists");
+        const result = await usersCollection.insertOne(user);
+        res.send(result);
+      });
+
+      //<---------
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
