@@ -1,7 +1,9 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const jwt = require("jsonwebtoken");
+const { MongoClient, ObjectId } = require("mongodb");
+const { ServerApiVersion } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.faioyfi.mongodb.net/?retryWrites=true&w=majority`;
 
 const app = express();
@@ -28,6 +30,15 @@ async function run() {
     // collections 
     const instructorsCollection = client.db('lingoCamp').collection('instructors');
     const classesCollection = client.db('lingoCamp').collection('classes');
+
+    // json web token
+    app.post('/jwt', (req,res)=>{
+        const user = req.body;
+        const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET,{
+            expiresIn: '1h'
+        });
+        res.send({token})
+    })
 
     app.get('/instructors', async(req,res)=>{
         const result = await instructorsCollection.find().toArray();
