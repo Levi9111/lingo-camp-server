@@ -8,6 +8,10 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 
+// Middleware
+app.use(cors());
+app.use(express.json());
+
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
@@ -20,6 +24,15 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     await client.connect();
+
+    // collections 
+    const instructorsCollection = client.db('lingoCamp').collection('instructors');
+
+    app.get('/instructors', async(req,res)=>{
+        const result = await instructorsCollection.find().toArray();
+        res.send(result);
+    })
+
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
