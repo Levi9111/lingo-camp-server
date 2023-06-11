@@ -31,6 +31,7 @@ async function run() {
     const instructorsCollection = client.db('lingoCamp').collection('instructors');
     const classesCollection = client.db('lingoCamp').collection('classes');
     const usersCollection = client.db('lingoCamp').collection('users');
+    const coursesCollection = client.db('lingoCamp').collection('courses');
 
     // json web token
     app.post('/jwt', (req,res)=>{
@@ -40,6 +41,15 @@ async function run() {
         });
         res.send({token})
     })
+
+    app.get("/courses", async (req, res) => {
+        const email = req.query.email;
+        if (!email) return res.send([]);
+        const query = { email: email };
+  
+        const result = await coursesCollection.find(query).toArray();
+        res.json(result);
+      });
 
     app.get('/instructors', async(req,res)=>{
         const result = await instructorsCollection.find().toArray();
@@ -67,8 +77,52 @@ async function run() {
         const result = await usersCollection.insertOne(user);
         res.send(result);
       });
-
       //<---------
+
+      app.post('/courses', async (req, res) => {
+        const item = req.body;
+        const result = await coursesCollection.insertOne(item);
+        res.send(result);
+      })
+
+      app.delete('/courses/:id', async (req, res) => {
+        const id = req.params.id;
+        const query = {_id: new ObjectId(id)};
+        const result = await coursesCollection.deleteOne(query);
+        res.send(result);
+      })
+
+
+    //   TODO : have to fix later
+   app.patch('/courses/:id/decrease-seats', async (req, res) => {
+  const id = req.params.id;
+  const filter = { _id: new ObjectId(id) };
+
+  try {
+    const currentCourse = await coursesCollection.findOne(filter);
+
+    if (!currentCourse) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    const updatedSeats = currentCourse.availableSeats - 1;
+
+    const updateDoc = {
+      $set: {
+        availableSeats: updatedSeats,
+      },
+    };
+
+    await coursesCollection.updateOne(filter, updateDoc);
+
+    res.status(200).json({ message: 'availableSeats decreased successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to decrease availableSeats' });
+  }
+});
+
+      
+      
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
