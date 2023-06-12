@@ -118,16 +118,12 @@ async function run() {
       const item = req.body;
       const result = await coursesCollection.insertOne(item);
       res.send(result);
-
-      console.log(`new Course`, req);
     });
 
     app.get("/courses/payment/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await usersCollection.findOne(query);
-      console.log(`Course id req :`, req);
-      console.log(`Course result :`, result);
       res.send(result);
     });
 
@@ -172,9 +168,6 @@ async function run() {
       const { price } = req.body;
       const amount = Math.round(+price * 100);
 
-      console.log(`Price:`, price, typeof price);
-      console.log(`Amount:`, amount, typeof amount);
-      console.log(req.body);
       const paymentIntent = await stripe.paymentIntents.create({
         amount: +amount,
         currency: "usd",
@@ -188,22 +181,15 @@ async function run() {
     app.post("/payment", verifyJWT, async (req, res) => {
       const payment = req.body;
       const insertResult = await paymentCollection.insertOne(payment);
-      console.log(`payment ln:189`, payment);
       const query = {
-        _id: new ObjectId(payment._id),
+        _id: new ObjectId(payment.courseIdentity),
       };
 
-      console.log(`Payment:`, payment);
-      console.log(`Payment ID :`, payment._id);
-      console.log(`Query :`, query);
-
-      const deletedResult = await coursesCollection.deleteMany(query);
+      const deletedResult = await coursesCollection.deleteOne(query);
 
       res.send({ insertResult, deletedResult });
-      // res.send(insertResult);
     });
 
-   
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
