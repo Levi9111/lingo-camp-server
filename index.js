@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
+const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
 const jwt = require("jsonwebtoken");
 const { MongoClient, ObjectId } = require("mongodb");
 const { ServerApiVersion } = require("mongodb");
@@ -8,7 +9,6 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 
 const app = express();
 const port = process.env.PORT || 3000;
-
 
 // Middleware
 app.use(cors());
@@ -49,111 +49,165 @@ const client = new MongoClient(uri, {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-  }
+  },
 });
 
 async function run() {
   try {
     await client.connect();
 
-    // collections 
-    const instructorsCollection = client.db('lingoCamp').collection('instructors');
-    const classesCollection = client.db('lingoCamp').collection('classes');
-    const usersCollection = client.db('lingoCamp').collection('users');
-    const coursesCollection = client.db('lingoCamp').collection('courses');
+    // collections
+    const instructorsCollection = client
+      .db("lingoCamp")
+      .collection("instructors");
+    const classesCollection = client.db("lingoCamp").collection("classes");
+    const usersCollection = client.db("lingoCamp").collection("users");
+    const coursesCollection = client.db("lingoCamp").collection("courses");
+    const paymentCollection = client.db("lingoCamp").collection("payment");
+    const purchaseHistoryCollection = client
+      .db("lingoCamp")
+      .collection("purchaseHistory");
 
     // json web token
-    app.post('/jwt', (req,res)=>{
-        const user = req.body;
-        const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET,{
-            expiresIn: '1h'
-        });
-        res.send({token})
-    })
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+      res.send({ token });
+    });
 
     app.get("/courses", async (req, res) => {
-        const email = req.query.email;
-        if (!email) return res.send([]);
-        const query = { email: email };
-  
-        const result = await coursesCollection.find(query).toArray();
-        res.json(result);
-      });
+      const email = req.query.email;
+      if (!email) return res.send([]);
+      const query = { email: email };
 
-    app.get('/instructors', async(req,res)=>{
-        const result = await instructorsCollection.find().toArray();
-        res.send(result);
-    })
+      const result = await coursesCollection.find(query).toArray();
+      res.json(result);
+    });
 
-    app.get('/classes', async(req,res)=>{
-        const result = await classesCollection.find().toArray();
-        res.send(result);
-    })
-    
+    app.get("/instructors", async (req, res) => {
+      const result = await instructorsCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get("/classes", async (req, res) => {
+      const result = await classesCollection.find().toArray();
+      res.send(result);
+    });
+
     //--------->
 
     app.get("/users", async (req, res) => {
-        const result = await usersCollection.find().toArray();
-        res.send(result);
-      });
-  
-      app.post("/users", async (req, res) => {
-        const user = req.body;
-        const query = { email: user.email };
-        const existedUser = await usersCollection.findOne(query);
-        // exister user used to identify if the user is already in the database while logging in with google
-        if (existedUser) return res.status(400).send("User already exists");
-        const result = await usersCollection.insertOne(user);
-        res.send(result);
-      });
-      //<---------
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
 
-      app.post('/courses', async (req, res) => {
-        const item = req.body;
-        const result = await coursesCollection.insertOne(item);
-        res.send(result);
-      })
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const query = { email: user.email };
+      const existedUser = await usersCollection.findOne(query);
+      // exister user used to identify if the user is already in the database while logging in with google
+      if (existedUser) return res.status(400).send("User already exists");
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
+    //<---------
 
-      app.delete('/courses/:id', async (req, res) => {
-        const id = req.params.id;
-        const query = {_id: new ObjectId(id)};
-        const result = await coursesCollection.deleteOne(query);
-        res.send(result);
-      })
+    app.post("/courses", async (req, res) => {
+      const item = req.body;
+      const result = await coursesCollection.insertOne(item);
+      res.send(result);
 
+      console.log(`new Course`, req);
+    });
+
+    app.get("/courses/payment/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await usersCollection.findOne(query);
+      console.log(`Course id req :`, req);
+      console.log(`Course result :`, result);
+      res.send(result);
+    });
+
+    app.delete("/courses/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await coursesCollection.deleteOne(query);
+      res.send(result);
+    });
 
     //   TODO : have to fix later
-   app.patch('/courses/:id/decrease-seats', async (req, res) => {
-  const id = req.params.id;
-  const filter = { _id: new ObjectId(id) };
+    app.patch("/courses/:id/decrease-seats", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
 
-  try {
-    const currentCourse = await coursesCollection.findOne(filter);
+      try {
+        const currentCourse = await coursesCollection.findOne(filter);
 
-    if (!currentCourse) {
-      return res.status(404).json({ error: 'Course not found' });
-    }
+        if (!currentCourse) {
+          return res.status(404).json({ error: "Course not found" });
+        }
 
-    const updatedSeats = currentCourse.availableSeats - 1;
+        const updatedSeats = currentCourse.availableSeats - 1;
 
-    const updateDoc = {
-      $set: {
-        availableSeats: updatedSeats,
-      },
-    };
+        const updateDoc = {
+          $set: {
+            availableSeats: updatedSeats,
+          },
+        };
 
-    await coursesCollection.updateOne(filter, updateDoc);
+        await coursesCollection.updateOne(filter, updateDoc);
 
-    res.status(200).json({ message: 'availableSeats decreased successfully' });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to decrease availableSeats' });
-  }
-});
+        res
+          .status(200)
+          .json({ message: "availableSeats decreased successfully" });
+      } catch (error) {
+        res.status(500).json({ error: "Failed to decrease availableSeats" });
+      }
+    });
 
-      
-      
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = Math.round(+price * 100);
+
+      console.log(`Price:`, price, typeof price);
+      console.log(`Amount:`, amount, typeof amount);
+      console.log(req.body);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: +amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    app.post("/payment", verifyJWT, async (req, res) => {
+      const payment = req.body;
+      const insertResult = await paymentCollection.insertOne(payment);
+      console.log(`payment ln:189`, payment);
+      const query = {
+        _id: new ObjectId(payment._id),
+      };
+
+      console.log(`Payment:`, payment);
+      console.log(`Payment ID :`, payment._id);
+      console.log(`Query :`, query);
+
+      const deletedResult = await coursesCollection.deleteMany(query);
+
+      res.send({ insertResult, deletedResult });
+      // res.send(insertResult);
+    });
+
+   
     await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    console.log(
+      "Pinged your deployment. You successfully connected to MongoDB!"
+    );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
@@ -162,11 +216,10 @@ async function run() {
 run().catch(console.dir);
 // Routes
 app.get("/", (req, res) => {
-    res.send("lingoCamp  server");
-  });
-  
-  // Start the server
-  app.listen(port, () => {
-    console.log(`lingoCamp Server is running on port ${port}`);
-  });
-  
+  res.send("lingoCamp  server");
+});
+
+// Start the server
+app.listen(port, () => {
+  console.log(`lingoCamp Server is running on port ${port}`);
+});
