@@ -190,6 +190,12 @@ async function run() {
       res.send({ insertResult, deletedResult });
     });
 
+    // purchase history
+    app.get("/history", async (req, res) => {
+      const result = await paymentCollection.find().toArray();
+      res.send(result);
+    });
+
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
