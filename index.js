@@ -96,6 +96,12 @@ async function run() {
       res.send(result);
     });
 
+    app.post("/classes", async (req, res) => {
+      const item = req.body;
+      const result = await classesCollection.insertOne(item);
+      res.send(result);
+    });
+
     //--------->
 
     app.get("/users", async (req, res) => {
