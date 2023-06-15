@@ -5,6 +5,7 @@ const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
 const jwt = require("jsonwebtoken");
 const { MongoClient, ObjectId } = require("mongodb");
 const { ServerApiVersion } = require("mongodb");
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.faioyfi.mongodb.net/?retryWrites=true&w=majority`;
 
 const app = express();
@@ -68,7 +69,7 @@ async function run() {
       .db("lingoCamp")
       .collection("purchaseHistory");
 
-    // json web token
+    // JSON web token
     app.post("/jwt", (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
@@ -111,8 +112,6 @@ async function run() {
       res.send(result);
     });
 
-    //--------->
-
     app.get("/users", async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
@@ -122,12 +121,12 @@ async function run() {
       const user = req.body;
       const query = { email: user.email };
       const existedUser = await usersCollection.findOne(query);
-      // exister user used to identify if the user is already in the database while logging in with google
+
       if (existedUser) return res.status(400).send("User already exists");
+
       const result = await usersCollection.insertOne(user);
       res.send(result);
     });
-    //<---------
 
     app.post("/courses", async (req, res) => {
       const item = req.body;
@@ -149,7 +148,6 @@ async function run() {
       res.send(result);
     });
 
-    //   TODO : have to fix later
     app.patch("/courses/:id/decrease-seats", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
@@ -225,10 +223,12 @@ async function run() {
     // await client.close();
   }
 }
+
 run().catch(console.dir);
+
 // Routes
 app.get("/", (req, res) => {
-  res.send("lingoCamp  server");
+  res.send("lingoCamp server");
 });
 
 // Start the server
