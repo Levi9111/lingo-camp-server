@@ -105,7 +105,6 @@ async function run() {
 
     app.get("/myclasses", async (req, res) => {
       const user = req.user;
-      console.log(user);
       const query = { email: user.email };
       const result = await classesCollection.find(query).toArray();
 
@@ -125,6 +124,32 @@ async function run() {
       if (existedUser) return res.status(400).send("User already exists");
 
       const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
+
+    app.patch("/users/instructor/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          role2: "Instructor",
+        },
+      };
+
+      const result = await usersCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+    app.patch("/users/admin/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          role1: "Admin",
+        },
+      };
+
+      const result = await usersCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
 
