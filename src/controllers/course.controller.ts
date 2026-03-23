@@ -1,6 +1,6 @@
 // src/controllers/course.controller.ts
 import { Request, Response } from 'express';
-import { Course } from '../models/Course.model';
+import { Course } from '../models/Course.model.js';
 
 export const getCourses = async (req: Request, res: Response) => {
   const { email } = req.query;
@@ -22,8 +22,8 @@ export const deleteCourse = async (req: Request, res: Response) => {
 export const decreaseSeats = async (req: Request, res: Response) => {
   const course = await Course.findByIdAndUpdate(
     req.params.id,
-    { $inc: { availableSeats: -1 } },   // atomic — no manual fetch needed
-    { new: true }
+    { $inc: { availableSeats: -1 } }, // atomic — no manual fetch needed
+    { new: true },
   );
   if (!course) return res.status(404).json({ error: 'Course not found' });
   res.json({ message: 'Seats decreased', availableSeats: course.availableSeats });

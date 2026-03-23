@@ -1,7 +1,6 @@
 // src/controllers/user.controller.ts
 import { Request, Response } from 'express';
-import { User } from '../models/User.model';
-
+import { User } from '../models/User.model.js';
 
 export const getAllUsers = async (req: Request, res: Response) => {
   const users = await User.find();
@@ -19,7 +18,7 @@ export const makeAdmin = async (req: Request, res: Response) => {
   const user = await User.findByIdAndUpdate(
     req.params.id,
     { $set: { role1: 'Admin' } },
-    { new: true }
+    { new: true },
   );
   res.json(user);
 };
@@ -28,7 +27,7 @@ export const makeInstructor = async (req: Request, res: Response) => {
   const user = await User.findByIdAndUpdate(
     req.params.id,
     { $set: { role2: 'Instructor' } },
-    { new: true }
+    { new: true },
   );
   res.json(user);
 };
