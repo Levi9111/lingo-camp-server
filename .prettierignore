@@ -1,0 +1,16 @@
+# Build output
+dist/
+build/
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.*
+
+# Config files
+*.json
+*.md
+*.yml
+*.yaml
